@@ -58,7 +58,7 @@ jobs:
             codesign --verify -vvv ./santa-driver.kext/Contents/MacOS/santa-driver 
             echo "Checking notarization for the Kernel Extension"
             xcrun stapler validate ./santa-driver.kext
-            echo ::set-output name=version::${GITHUB_REF#refs/*/}
+            echo ::set-output name=version::${GITHUB_REF:11}
             exit $RC
        - name: "Create issue if failed to install"
          if: failure()
