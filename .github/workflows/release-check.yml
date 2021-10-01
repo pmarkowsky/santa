@@ -3,6 +3,12 @@ on:
   release:
     types:
       - created
+      - published
+      - unpublished
+      - edited
+      - deleted
+      - prereleased
+      - released
 
 jobs:
   installs-cleanly:
@@ -59,6 +65,7 @@ jobs:
        - name: "Create issue if failed to install"
          if: failure()
          run: |
+            VERSION=$(curl -s https://api.github.com/repos/google/santa/releases/latest | jq '.tag_name')  
             curl -X "POST" "https://api.github.com/repos/${{ github.repository }}/issues" \
                 -H "Content-Type: application/json; charset=utf-8" \
                 -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
