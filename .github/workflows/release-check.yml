@@ -14,18 +14,27 @@ jobs:
     steps:
        - name: "Unzip and install latest release"
          id: install
+         outputs:
+            version: 
          run: |
             # pull down package
+            echo "::set-output name=version::${GITHUB_REF#refs/*/}
             latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
+            echo "Pulling down Santa from URL: $latest_url"
             curl -s -L -o santa.tar.gz $latest_url
+
+            # expand the installer
             tar zxf ./santa.tar.gz
             cd santa-*/Conf
+
             # Run the installer script
             echo "Running install.sh from $(pwd)"
             sudo ./install.sh
+
+            # store the return code for the install script
             RC=$?
             echo "Installer returned $RC"
-            # store the return code for the install script
+
             # Check code signing and entitlements
             cd ../binaries
             echo "Checking Entitlements for Santa.app"
@@ -58,12 +67,11 @@ jobs:
             codesign --verify -vvv ./santa-driver.kext/Contents/MacOS/santa-driver 
             echo "Checking notarization for the Kernel Extension"
             xcrun stapler validate ./santa-driver.kext
-            echo ::set-output name=version::${GITHUB_REF#refs/*/}
             exit $RC
        - name: "Create issue if failed to install"
          if: failure()
          run: |
-            echo "Reporting issue for $VERSION on ${{matrix.os}}"
+            echo "Reporting issue for ${{steps.install.outputs.version}} on ${{matrix.os}}"
             curl -X "POST" "https://api.github.com/repos/${{ github.repository }}/issues" \
                 -H "Content-Type: application/json" \
                 -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
