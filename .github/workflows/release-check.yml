@@ -14,8 +14,6 @@ jobs:
     steps:
        - name: "Unzip and install latest release"
          id: install
-         outputs:
-            version: 
          run: |
             # pull down package
             echo "::set-output name=version::${GITHUB_REF#refs/*/}
