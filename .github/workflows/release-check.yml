@@ -20,15 +20,13 @@ jobs:
             latest_url=""
             for i in `seq 1 10`; do
                 latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
-                backup_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | jq ".browser_download_url")
                 if [ "x$latest_url" != "x" ]; then
                   break;
                 fi
             done;
 
             if [ "x$latest_url" == "x" ]; then
-              echo "unable to get url"
-              echo "backup_url: $backup_url"
+              echo "unable to get url for ${GITHUB_REF#refs/*/}"
               exit 1;
             fi
 
@@ -47,9 +45,10 @@ jobs:
        - name: "Check Santa.App Codesigning" 
          run: |
             cd santa-*/Conf
+            BINS=('Santa' 'santabundleservice' 'santactl')
 
-            for $bin in "Santa\nsantabundleservice\nsantactl"; do
-              codesign --verify --verbose
+            for bin in "${BINS[@]}"; do
+              codesign --verify --verbose ./Santa.app/Contents/MacOS/$bin
               codesign -d -vvv ./Santa.app/Contents/MacOS/$bin
             done
 
