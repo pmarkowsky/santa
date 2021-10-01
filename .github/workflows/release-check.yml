@@ -14,11 +14,9 @@ jobs:
     steps:
        - name: "Unzip and install latest release"
          id: install
-         outputs:
-            version: 
          run: |
             # pull down package
-            echo "::set-output name=version::${GITHUB_REF#refs/*/}
+            echo "::set-output name=version::${GITHUB_REF#refs/*/}"
             latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
             echo "Pulling down Santa from URL: $latest_url"
             curl -s -L -o santa.tar.gz $latest_url
