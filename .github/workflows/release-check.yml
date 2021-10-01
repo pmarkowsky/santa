@@ -2,13 +2,7 @@ name: Release is Installable
 on:
   release:
     types:
-      - created
       - published
-      - unpublished
-      - edited
-      - deleted
-      - prereleased
-      - released
 
 jobs:
   installs-cleanly:
@@ -25,9 +19,11 @@ jobs:
             tar zxvf ./santa.tar.gz
             cd santa-*/Conf
             # Run the installer script
+	    echo "Running install.sh from $(pwd)"
             sudo ./install.sh
-            # store the return code for the install script
             RC=$?
+	    echo "Installer returned $RC"
+            # store the return code for the install script
             # Check code signing and entitlements
             cd ../binaries
             echo "Checking Entitlements for Santa.app"
