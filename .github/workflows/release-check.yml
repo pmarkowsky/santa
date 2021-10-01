@@ -15,10 +15,30 @@ jobs:
        - name: "Fetch latest release"
          id: fetch
          run: |
-            # pull down package
             echo "::set-output name=version::${GITHUB_REF#refs/*/}"
-            latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
+            # pull down package
+            latest_url=""
+            for i in `seq 1 10`; do
+                latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
+                backup_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | jq ".browser_download_url")
+                if [ "x$latest_url" != "x" ]; then
+                  break;
+                fi
+            done;
+
+            if [ "x$latest_url" == "x" ]; then
+              echo "unable to get url"
+              echo "backup_url: $backup_url"
+              exit 1;
+            fi
+
             echo "Pulling down Santa from URL: $latest_url"
+            if [ "x$latest_url" == "x" ]; then
+              echo "backup_url: $backup_url"
+
+            fi
+            echo "Pulling down Santa from URL: $latest_url"
+
             curl -s -L -o santa.tar.gz $latest_url
 
             # expand the installer
