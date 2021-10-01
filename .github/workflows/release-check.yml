@@ -58,7 +58,7 @@ jobs:
             codesign --verify -vvv ./santa-driver.kext/Contents/MacOS/santa-driver 
             echo "Checking notarization for the Kernel Extension"
             xcrun stapler validate ./santa-driver.kext
-            echo ::set-output name=version::${GITHUB_REF:11}
+            echo ::set-output name=version::${GITHUB_REF#refs/*/}
             exit $RC
        - name: "Create issue if failed to install"
          if: failure()
@@ -67,7 +67,7 @@ jobs:
             curl -X "POST" "https://api.github.com/repos/${{ github.repository }}/issues" \
                 -H "Content-Type: application/json" \
                 -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-                -d '{"title": "Failed to Install Santa Release ${{steps.install.version}} on ${{matrix.os}}",
-                     "body": "Automated testing failed to install Santa release ${{steps.install.version}} on ${{matrix.os}} with SIP enabled.\n\nPlease check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}}).", 
+                -d '{"title": "Failed to Install Santa Release ${{steps.install.outputs.version}} on ${{matrix.os}}",
+                     "body": "Automated testing failed to install Santa release ${{steps.install.outputs.version}} on ${{matrix.os}} with SIP enabled.\n\nPlease check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}}).", 
                      "assignees": ["pmarkowsky"],
                      "labels": ["bug"]}'
