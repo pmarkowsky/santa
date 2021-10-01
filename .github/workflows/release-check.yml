@@ -12,6 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
        - name: "Unzip and install latest release"
+         id:install
          run: |
             # pull down package
             latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
@@ -56,14 +57,16 @@ jobs:
             codesign --verify -vvv ./santa-driver.kext/Contents/MacOS/santa-driver 
             echo "Checking notarization for the Kernel Extension"
             xcrun stapler validate ./santa-driver.kext
+            echo ::set-output name=version::${GITHUB_REF#refs/*/}
             exit $RC
        - name: "Create issue if failed to install"
          if: failure()
          run: |
-            VERSION=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | jq '.tag_name')  
             echo "Reporting issue for $VERSION on ${{matrix.os}}"
-            printf -v MSG "Automated testing failed to install Santa Release $VERSION on ${{matrix.os}} with SIP enabled.Please check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}})."
             curl -X "POST" "https://api.github.com/repos/${{ github.repository }}/issues" \
-                -H "Content-Type: application/json; charset=utf-8" \
+                -H "Content-Type: application/json" \
                 -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-                -d "{\"title\": \"Failed to install Santa Release $VERSION on ${{matrix.os}}\",\"body\": \"$MSG\", "assignees": [\"pmarkowsky\", \"tnek\"],\"labels\": [\"bug\"]}"
+                -d '{"title": "Failed to Install Santa Release ${{steps.install.version}} on ${{matrix.os}}",
+                     "body": "Automated testing failed to install Santa release ${{steps.install.version}} on ${{matrix.os}} with SIP enabled.\n\nPlease check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}}).", 
+                     "assignees": ["pmarkowsky", "tnek"],
+                     "labels": ["bug"]}'
