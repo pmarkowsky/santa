@@ -69,5 +69,5 @@ jobs:
                 -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
                 -d '{"title": "Failed to Install Santa Release ${{steps.install.version}} on ${{matrix.os}}",
                      "body": "Automated testing failed to install Santa release ${{steps.install.version}} on ${{matrix.os}} with SIP enabled.\n\nPlease check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}}).", 
-                     "assignees": ["pmarkowsky", "tnek"],
+                     "assignees": ["pmarkowsky"],
                      "labels": ["bug"]}'
