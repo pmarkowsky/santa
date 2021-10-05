@@ -1,0 +1,157 @@
+name: Release is Installable
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  installs-cleanly:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-10.15, macos-11, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+       - name: "Fetch latest release"
+         id: fetch
+         run: |
+            echo "::set-output name=version::${GITHUB_REF#refs/*/}"
+            # pull down package
+            latest_url=""
+            # Try to pull down the latest release 10 times to account for API issues
+            for i in `seq 1 10`; do
+                latest_url=$(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest | grep '.tar.gz' |  grep browser_download_url | awk '{print $2}' | sed -e 's/\"//g')
+                if [ "x$latest_url" != "x" ]; then
+                  echo "Pulling down Santa from URL: $latest_url"
+                  curl -s -L -o santa.tar.gz $latest_url
+                  # expand the installer
+                  tar zxf ./santa.tar.gz
+                  echo "::set-output name=got_release_pkg::true"
+                  exit 0
+                fi
+            done;
+
+            echo "unable to get url for ${GITHUB_REF#refs/*/}"
+            echo "JSON: $(curl -s https://api.github.com/repos/${{github.repository}}/releases/latest)"
+            exit 1;
+
+       - name: "Check Santa.App Codesigning" 
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            BINS=('Santa' 'santabundleservice' 'santactl')
+
+            RC="0"
+            for bin in "${BINS[@]}"; do
+              codesign -d -vvv ./Santa.app/Contents/MacOS/$bin
+              codesign --verify --verbose ./Santa.app/Contents/MacOS/$bin
+              if [ "$?" != "0" ]; then
+                  RC="1"
+              fi
+              echo "Code signing for failed for ./Santa.app/Contents/MacOS/$bin"
+            done
+            exit $RC
+
+       - name: "Checking Entitlements for Santa.app"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+
+            entitlements=$(codesign -d --entitlements :- "./Santa.app")
+            echo "$entitlements"
+
+            expected=('com.apple.developer.system-extension.install')
+
+            for expectedentitlement in "${expected[@]}"; do
+               $(echo $entitlements | grep -A 1 $expectedentitlement | grep -i '</true>')
+               RC=$?
+               if [ "$RC" != "0" ]; then
+                  echo "Missing $expectedentitlement entitlement"
+               fi
+            done
+            echo "$entitlements"
+
+
+       - name: "Check Santa.app Notarization"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            xcrun stapler validate ./Santa.app
+
+       - name: "Checking Code Signing for System Extension"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
+
+            codesign --verify --verbose $SANTAD_BIN
+            if [ "$?" != "0"]; then
+                codesign -d -vvv $SANTAD_BIN
+                exit 1
+            fi
+
+       - name: "Checking Entitlements for System Extension"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
+
+            entitlements=$(codesign -d --entitlements :- $SANTAD_BIN)
+
+            expected=('com.apple.developer.endpoint-security.client')
+
+            for expectedentitlement in "${expected[@]}"; do
+               $(echo $entitlements | grep -A 1 $expectedentitlement | grep -i '<true/>')
+               RC=$?
+               if [ "$RC" != "0" ]; then
+                  echo "$entitlements"
+                  exit 1;
+               fi
+            done
+
+
+       - name: "Checking Notarization for System Extension"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
+
+            xcrun stapler validate $SANTAD_BIN
+
+       - name: "Checking Signing for Kernel Extension"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            codesign -dvvv -a arm64 ./santa-driver.kext/Contents/MacOS/santa-driver 
+            codesign -dvvv ./santa-driver.kext/Contents/MacOS/santa-driver 
+            codesign --verify --verbose ./santa-driver.kext/Contents/MacOS/santa-driver 
+
+       - name: "Checking Notarization for Kernel Extension"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/binaries
+            xcrun stapler validate ./santa-driver.kext
+       - name: "Test Installation"
+         if: steps.fetch.outputs.got_release_pkg == "true"
+         run: |
+            cd santa-*/Conf
+            # Run the installer script
+            echo "Running install.sh from $(pwd)"
+            sudo ./install.sh
+
+            # store the return code for the install script
+            RC=$?
+            echo "Installer returned $RC"
+            exit $RC
+
+       - name: "Create issue if failed to install"
+         if: failure()
+         run: |
+            echo "Reporting issue for ${{steps.fetch.outputs.version}} on ${{matrix.os}}"
+            curl -X "POST" "https://api.github.com/repos/${{ github.repository }}/issues" \
+                -H "Content-Type: application/json" \
+                -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+                -d '{"title": "Failed to Install Santa Release ${{steps.fetch.outputs.version}} on ${{matrix.os}}",
+                     "body": "Automated testing failed to install Santa release ${{steps.install.outputs.version}} on ${{matrix.os}} with SIP enabled.\n\nPlease check the [workflow run for errors](http://github.com/${{github.repository}}/actions/runs/${{github.run_id}}).", 
+                     "assignees": ["pmarkowsky"],
+                     "labels": ["bug"]}'
