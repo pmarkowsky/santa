@@ -6,7 +6,6 @@ on:
 
 jobs:
   installs-cleanly:
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -27,7 +26,6 @@ jobs:
                   curl -s -L -o santa.tar.gz $latest_url
                   # expand the installer
                   tar zxf ./santa.tar.gz
-                  echo "::set-output name=got_release_pkg::true"
                   exit 0
                 fi
             done;
@@ -37,7 +35,7 @@ jobs:
             exit 1;
 
        - name: "Check Santa.App Codesigning" 
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             BINS=('Santa' 'santabundleservice' 'santactl')
@@ -54,7 +52,7 @@ jobs:
             exit $RC
 
        - name: "Checking Entitlements for Santa.app"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
 
@@ -74,13 +72,13 @@ jobs:
 
 
        - name: "Check Santa.app Notarization"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             xcrun stapler validate ./Santa.app
 
        - name: "Checking Code Signing for System Extension"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
@@ -92,7 +90,7 @@ jobs:
             fi
 
        - name: "Checking Entitlements for System Extension"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
@@ -112,7 +110,7 @@ jobs:
 
 
        - name: "Checking Notarization for System Extension"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             SANTAD_BIN="./Santa.app/Contents/Library/SystemExtensions/com.google.santa.daemon.systemextension/Contents/MacOS/com.google.santa.daemon"
@@ -120,7 +118,7 @@ jobs:
             xcrun stapler validate $SANTAD_BIN
 
        - name: "Checking Signing for Kernel Extension"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             codesign -dvvv -a arm64 ./santa-driver.kext/Contents/MacOS/santa-driver 
@@ -128,12 +126,12 @@ jobs:
             codesign --verify --verbose ./santa-driver.kext/Contents/MacOS/santa-driver 
 
        - name: "Checking Notarization for Kernel Extension"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/binaries
             xcrun stapler validate ./santa-driver.kext
        - name: "Test Installation"
-         if: steps.fetch.outputs.got_release_pkg == 'true'
+         if: always()
          run: |
             cd santa-*/Conf
             # Run the installer script
