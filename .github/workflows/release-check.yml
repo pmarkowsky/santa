@@ -6,6 +6,7 @@ on:
 
 jobs:
   installs-cleanly:
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
