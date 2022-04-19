@@ -6,7 +6,7 @@ parent: Development
 # Syncing Overview
 
 This document explains the sync protocol for an overview of the
-process see  [[Sync Overview]]. 
+process see  [[Sync Overview]](). 
 
 #### Background
 
@@ -68,7 +68,7 @@ All URLs are of the form `/<stage_name>/<machine_id>`, e.g. the preflight URL is
 
 #### Preflight
 
-The preflight stage is used for the Santa daemon to report Information about the machine.
+The preflight stage is used for the Santa daemon to report Information about the machine and to retrieve configuration settings from the sync server.
 
 
 Initially makes the request POST /preflight/<machine_id> HTTP/1.1
