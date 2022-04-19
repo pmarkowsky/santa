@@ -88,10 +88,10 @@ sequenceDiagram
 The request consists of the following JSON keys:
 
 | Key | Required | Type | Meaning | Example Value | 
-|---|---|---|---|
+|---|---|---|---|---|
 | serial_num    | YES | string | The macOS serial number from IOKit `kIOPlatformSerialNumberKey` |  "5c8644810000000000000000004330325a333055524c564451000000000000000000000000000000000000" |
 | hostname      | YES | string | The fqdn hostname of the client | markowsky.example.com | 
-| os_version    | YES | string | The OS version of the client |  |
+| os_version    | YES | string | The OS version of the client from /System/Library/CoreServices/SystemVersion.plist |  |
 | os_build      | YES | string | The OS build from /System/Library/CoreServices/SystemVersion.plist | "21F5048e" |
 | model_identifier | NO | string | | | 
 | santa_version | YES | string | |
@@ -101,7 +101,7 @@ The request consists of the following JSON keys:
 | certificate_rule_count | NO | int | number of certificate allow / deny rules the client has at time of sync | 3400 |
 | compiler_rule_count | NO | int | number of compiler rules the client has time of sync |
 | transitive_rule_count | NO | int | number of transitive rules the client has at the time of sync |
-| teamid_rule_count | NO | int | |
+| teamid_rule_count | NO | int | 24 |
 | client_mode | YES | string | the mode the client is operating in, either "LOCKDOWN" or "MONITOR" |
 
 
