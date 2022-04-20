@@ -285,16 +285,17 @@ HTTP POST request to the url `/ruledownload/<machine_id>`
 
 
 ### Example Payload 
-Initially the payload is empty
 
-```
-{"}
+On the first request the payload is empty
+
+```json
+{}
 
 ```
 
 On subsequent requests to the server the cursor value is set.
 
-```
+```json
 {"cursor": "2200"}
 ```
 
@@ -321,13 +322,18 @@ downloading if the rules need to be downloaded in multiple batches.
 
 ### Example `ruledownload` Response Payload
 
-```
-{"rules": [{"identifier": "<sha256>", "policy": "ALLOWLIST", "rule_type": "BINARY", "bundle_hash": ""},
- "cursor": "ff"}
+```json
+{"rules": [
+   {"identifier": "<sha256>", 
+    "policy": "ALLOWLIST", 
+    "rule_type": "BINARY", 
+    "bundle_hash": ""}],
+ "cursor": "ff"
+}
 ```
 
 
-## `postflight` stage
+## `postflight` Stage
 
 The postflight stage updates the clients internal counters and is used to
 notify the sync server that the sync is complete.
