@@ -312,7 +312,7 @@ downloading if the rules need to be downloaded in multiple batches.
 ### Rules Objects
 
 | Key | Required | Type | Meaning | Example Value | 
-|---|---|---|---|
+|---|---|---|---|---|
 | identifier | YES | string | the idenfier the rule should match on | |
 | policy | YES | string | identifies the action to perform in response to the rule matching |  |
 | rule_type | YES | string | identifies the type of rule | | 
