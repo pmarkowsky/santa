@@ -107,16 +107,15 @@ The request consists of the following JSON keys:
 
 Example Preflight request JSON Payload:
 
-```
+```json
 {
-	OSBuild              string     `json:"os_build"`
-	SantaVersion         string     `json:"santa_version"`
-	Hostname             string     `json:"hostname"`
-	OSVersion            string     `json:"os_version"`
-	CertificateRuleCount int        `json:"certificate_rule_count"`
-	BinaryRuleCount      int        `json:"binary_rule_count"`
-	ClientMode           ClientMode `json:"client_mode"`
-	PrimaryUser          string     `json:"primary_user"`
+	"serial_num":   "5c8644810000000000000000004330325a333055524c564451000000000000000000000000000000000000", 
+	"hostname": "markowsky.local",
+        "santa_version": "2022.3",
+        "os_version": "12.4",
+        "os_build": "21F5048e",
+        "client_mode": "LOCKDOWN",
+        "primary_user": "markowsky"
 }
 ```
 
@@ -128,7 +127,7 @@ When a 200 is returned by the server it has a JSON object in the response.
 This returns a JSON object of with the following keys:
 
 | Key | Required | Type | Meaning | Example Value |
-|---|---|---|---|
+|---|---|---|---|---|
 | enable_bundles | NO | boolean | enabled bundle scanning  | true |
 | bundles_enabled | NO | boolean |  deprecated key for enabling bundle scanning  | true |
 | enable_transitive_rules | NO | boolean | should we enable transitive whitelisting | true |
@@ -145,16 +144,18 @@ This returns a JSON object of with the following keys:
 
 #### Example Preflight Response Payload
 
-```
-{"enable_bundles": boolean,
- "bundles_enabled: boolean,
- "enable_transitive_rules":
+```json
+{"enable_bundles": true,
+ "bundles_enabled: false,
+ "enable_transitive_rules": false,
 }
 ```
 
 # eventsupload
 
-After the `preflight` stage has completed the client then initiates the `eventUpload` stage. 
+After the `preflight` stage has completed the client then initiates the
+`eventUpload` stage if it has any events to upload. If there aren't any events
+this stage is skipped.
 
 It consists of the following transaction.
 
@@ -167,6 +168,52 @@ sequenceDiagram
 This transaction may be repeated until all events are uploaded to the sync service.
 
 ## `eventupload` Request
+
+| Key | Required | Type | Meaning | Example Value |
+|---|---|---|---|---|
+| events | YES | list of event objects | list of events to upload | see example payload |
+
+
+### Event Objects
+
+| Key | Required | Type | Meaning | Example Value |
+|---|---|---|---|---|
+| file_sha256 | YES | string | sha256 of the executable that was blocked | |
+| file_path | YES | string | absolute file path to the executable that was blocked | "/tmp/foo" |
+| file_name | YES | string | the command portion of the path of the blocked executable | "foo" |
+| executing_user | YES | string | the username that executed the binary | "markowsky" |
+| execution_time | YES | int | unix timestamp of when the execution occured | 23344234232 |
+| loggedin_users | YES | list of strings | list of usernames logged in according to utmp (check) | ["markowsky"] |
+| current_sessions | YES | list of strings | check | |
+| decision | YES | string | result of if Santa blocked or allowed and why | "ALLOW_BINARY" |
+| file_bundle_id | NO | string |  TODO | TODO |
+| file_bundle_path | NO | string | TODO | TODO |
+| file_bundle_executable_rel_path | NO | string | TODO | TODO |
+| file_bundle_name | NO | string | TODO | TODO |
+| file_bundle_version | NO | string | TODO | TODO |
+| file_bundle_version_string | NO | string | TODO | TODO |
+| file_bundle_hash | NO | string | TODO | TODO |
+| file_bundle_hash_millis | YES | int | TODO | TODO |
+| pid | YES | int | process id of the executable that was blocked | 1234 |
+| ppid | YES | int | process id of the parent of the executable that was blocked | 456 |
+| parent_name | YES | the short command name of the parent process of the executable that was blocked | "bar" |
+| quarantine_data_url | NO | string |  TODO | TODO |
+| quarantine_referer_url | NO | string | URL of the referere | TODO |
+| quarantine_timestamp | NO | int | UNIX Timestamp of TODO | TODO |
+| quarantine_agent_bundle_id | NO | string | TODO | TODO |
+| signing_chain | NO | list of signing chain objects | certs used to code sign the executable | |
+
+#### Signing Chain Objects
+
+| Key | Required | Type | Meaning | Example Value |
+|---|---|---|---|---|
+| sha256 | YES | string | sha256 of the certificate used to sign | TODO |
+| cn | YES | string | common name cn field of the certificate used to sign | TODO |
+| org | YES | string | org field of the certificate used to sign | TODO |
+| ou | YES | string | ou field of the certificate used to sign | TODO |
+| valid_from | YES | int | unix timestamp of when the cert was issued | TODO |
+| valid_until | YES | int | unix timestamp of when the cert expires | TODO |
+
 
 ### `eventupload` Request Example Payload 
 
@@ -210,17 +257,26 @@ This transaction may be repeated until all events are uploaded to the sync servi
 
 ## `eventupload` Response
 
+The server does not actually send a response other than an HTTP 200.
 
-### `eventupload` Response Example Payload 
 
+## `rulesdownload` Stage
 
-### Example Payload
+After Events have been uploaded to the Sync server, the Client then initiates the `rulesdownload` request. 
 
-# Rules 
+Like the previous stages this is a simple HTTP request response cycle like so:
 
-## Rule Requests
+```mermaid
+sequenceDiagram
+   client ->> server: POST /ruledownload/<machine_id>
+   server -->> client: ruledownload response
+```
 
-Rules are retrieve from the sync server by having the client (Santa) issues an
+This may be performed many times.
+
+## `ruledownload` Requests
+
+Rules are retrieved from the sync server by having the client (Santa) issues an
 HTTP POST request to the url `/ruledownload/<machine_id>`
 
 | Key | Required | Type | Meaning |
