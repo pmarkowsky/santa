@@ -22,6 +22,7 @@
 
 #include <bsm/libbsm.h>
 #include <libproc.h>
+#include <string.h>
 #include <atomic>
 
 // Gleaned from https://opensource.apple.com/source/xnu/xnu-4903.241.1/bsd/sys/proc_internal.h
