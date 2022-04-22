@@ -298,6 +298,13 @@ static const pid_t PID_MAX = 99999;
                                                       size:sizeof(sm.ttypath)];
       break;
     }
+    case ES_EVENT_TYPE_AUTH_MMAP:
+      if (strstr(m->event.mmap.source->path.data, "/NSCreateObjectFileImageFromMemory-")) {
+         es_respond_auth_result(self.client, m, ES_AUTH_RESULT_DENY, true);
+      } else {
+         es_respond_auth_result(self.client, m, ES_AUTH_RESULT_ALLOW, true);
+      }
+    break;
     case ES_EVENT_TYPE_NOTIFY_EXEC: {
       sm.action = ACTION_NOTIFY_EXEC;
       targetFile = m->event.exec.target->executable;
@@ -452,6 +459,7 @@ static const pid_t PID_MAX = 99999;
     ES_EVENT_TYPE_AUTH_UNLINK,
     ES_EVENT_TYPE_AUTH_RENAME,
     ES_EVENT_TYPE_AUTH_KEXTLOAD,
+    ES_EVENT_TYPE_AUTH_MMAP,
 
     // This is in the decision callback because it's used for detecting
     // the exit of a 'compiler' used by transitive whitelisting.
