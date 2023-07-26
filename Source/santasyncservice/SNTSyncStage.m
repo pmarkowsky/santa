@@ -108,11 +108,12 @@
 
   for (int attempt = 1; attempt < 6; ++attempt) {
     if (attempt > 1) {
-      struct timespec ts = {.tv_sec = (attempt * 2)};
+      // Exponentially back off 2, 4, 8, 16, 32 seconds;
+      struct timespec ts = {.tv_sec = 1 << attempt };
       nanosleep(&ts, NULL);
     }
 
-    SLOGD(@"Performing request, attempt %d", attempt);
+    SLOGD(@"Performing request, attempt %d of 5", attempt);
     data = [self performRequest:request timeout:timeout response:&response error:&error];
     if (response.statusCode == 200) break;
 
