@@ -105,11 +105,19 @@
   NSHTTPURLResponse *response;
   NSError *error;
   NSData *data;
+  struct timespec ts;
+
+  // Add jitter to requests (generate random jitter sleep between 500 - 1500
+  // milliseconds).
+  int jitter_delay = (arc4random() % (1500 - 500)) + 500;
+  ts.tv_sec = 0;
+  ts.tv_nsec = jitter_delay * 1000000;  // convert milliseconds to nanoseconds;
+  nanosleep(&ts, NULL);
 
   for (int attempt = 1; attempt < 6; ++attempt) {
     if (attempt > 1) {
       // Exponentially back off 2, 4, 8, 16, 32 seconds;
-      struct timespec ts = {.tv_sec = 1 << attempt };
+      ts.tv_sec = 1 << attempt;
       nanosleep(&ts, NULL);
     }
 
