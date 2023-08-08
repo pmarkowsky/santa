@@ -47,7 +47,7 @@ sequenceDiagram
    end
    loop until all rules are downloaded
    client ->> server: POST /ruledownload/<machine_id>
-   server --> client: ruledownload response (200)
+   server -->> client: ruledownload response (200)
    end
    client ->> server: POST /postflight/<machine_id> request
    server -->> client: postflight response (200)
@@ -97,8 +97,9 @@ The request consists of the following JSON keys:
 | compiler_rule_count | NO | int | Number of compiler rules the client has time of sync |
 | transitive_rule_count | NO | int | Number of transitive rules the client has at the time of sync |
 | teamid_rule_count | NO | int | Number of TeamID rules the client has at the time of sync | 24 |
-| client_mode | YES | string | the mode the client is operating in, either "LOCKDOWN" or "MONITOR" | LOCKDOWN |
-| request_clean_sync | NO | bool | the client has requested a clean sync of its rules from the server. | true |
+| client_mode | YES | string | The mode the client is operating in, either "LOCKDOWN" or "MONITOR" | LOCKDOWN |
+| client_type | NO | string | The name of the client either "SANTA" or other client name |
+| request_clean_sync | NO | bool | The client has requested a clean sync of its rules from the server. | true |
 
 
 ### Example preflight request JSON Payload:
@@ -131,7 +132,8 @@ The JSON object has the following keys:
 | Key | Required | Type | Meaning | Example Value |
 |---|---|---|---|---|
 | enable_bundles | NO | boolean | Enabled bundle scanning  | true |
-| enable_transitive_rules | NO | boolean | Whether or not to enable transitive allowlisting | true |
+| enable_transitive_rules | NO | boolean | Whether or not to enable transitive allowlisting  | true |
+| enable_all_event_upload | NO | boolean | Whether or not the client should upload all events including allows to the sync service | true |
 | batch_size | YES | integer | Number of events to upload at a time | 128 |
 | full_sync_interval | YES | integer | Number of seconds between full syncs | 600 |
 | client_mode | YES | string | Operating mode to set for the client | either "MONITOR" or "LOCKDOWN" |
@@ -199,13 +201,30 @@ sequenceDiagram
 | file_bundle_hash | NO | string | SHA256 hash of all executables in the bundle | "7466e3687f540bcb7792c6d14d5a186667dbe18a85021857b42effe9f0370805" |
 | file_bundle_hash_millis | NO | float64 | The time in milliseconds it took to find all of the binaries, hash and produce the bundle_hash | 1234775 |
 | pid | YES | int | Process id of the executable that was blocked | 1234 |
-| ppid | YES | int | Parent process id of the executable that was blocked | 456 |
-| parent_name | YES | Parent process short command name of the executable that was blocked | "bar" |
+| ppid | NO (only macOS) | int | Parent process id of the executable that was blocked | 456 |
+| parent_name | NO (only macOS) | Parent process short command name of the executable that was blocked | "bar" |
 | quarantine_data_url | NO | string |  The actual URL of the quarantined item from the quarantine database that this binary was downloaded from | https://dl.google.com/chrome/mac/stable/GGRO/googlechrome.dmg |
 | quarantine_referer_url | NO | string | Referring URL that lead to the binary being downloaded if known.  | https://www.google.com/chrome/downloads/ |
 | quarantine_timestamp | NO | float64 | Unix Timestamp of when the binary was downloaded or 0 if not quarantined | 0 |
 | quarantine_agent_bundle_id | NO | string | The bundle ID of the software that quarantined the binary | "com.apple.Safari" |
 | signing_chain | NO | list of signing chain objects | Certs used to code sign the executable | See next section |
+| extra_hashes | NO | list of hashes | See hash objects section |
+| extra_signing_chains | NO | list of lists of extra signing chains for platforms where multiple entities may sign a binary | See signing chain section |
+
+
+##### Hash Objects 
+
+| Key | Required | Type | Meaning | Example Value |
+|---|---|---|---|---|
+| hash | YES | string | The value of the hash | "7ae80b9ab38af0c63a9a81765f434d9a7cd8f720eb6037ef303de39d779bc258" |
+| type | YES | string | The type of the hash in the hash field one of "CDHASH", "SHA256", "SHA256_AUTHENTICODE", "SHA1", "SHA1_PAGE_AUTHENTICODE", "SHA256_PAGE_AUTHICODE" | "SHA256" | 
+
+
+```json
+{"hash": "7ae80b9ab38af0c63a9a81765f434d9a7cd8f720eb6037ef303de39d779bc258",
+ "type": "SHA256"}
+```
+
 
 ##### Signing Chain Objects
 
@@ -356,8 +375,8 @@ downloading if the rules need to be downloaded in multiple batches.
 | Key | Required | Type | Meaning | Example Value |
 |---|---|---|---|---|
 | identifier | YES | string | The attribute of the binary the rule should match on e.g. the team ID of a binary or sha256 hash value | "ff2a7daa4c25cbd5b057e4471c6a22aba7d154dadfb5cce139c37cf795f41c9c" |
-| policy | YES | string | Identifies the action to perform in response to the rule matching (must be one of the examples) | "ALLOWLIST","ALLOWLIST_COMPILER", "BLOCKLIST", "REMOVE",  "SILENT_BLOCKLIST" |
-| rule\_type | YES | string | Identifies the type of rule (must be one of the examples) | "BINARY", "CERTIFICATE", "SIGNINGID", "TEAMID" |
+| policy | YES | string | Identifies the action to perform in response to the rule matching (must be one of the examples) | "ALLOWLIST","ALLOWLIST_COMPILER", "BLOCKLIST", "REMOVE",  "SILENT_BLOCKLIST", "ALLOWLIST_INSTALLER" |
+| rule\_type | YES | string | Identifies the type of rule (must be one of the examples) | "BINARY", "CERTIFICATE", "SIGNINGID", "TEAMID", "BINARY_SHA1", "AUTHENTICODE_SHA256", "AUTHENTICODE_SHA1_PAGE", "AUTHENTICODE_SHA256_PAGE" |
 | custom\_msg | NO | string | A custom message to display when the rule matches | "Hello" |
 | custom\_url | NO | string | A custom URL to use for the open button when the rule matches | http://lmgtfy.app/?q=dont+download+malware |
 | creation\_time | NO | float64 | Time the rule was created | 1573543803.349378 |
