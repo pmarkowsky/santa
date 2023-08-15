@@ -217,7 +217,7 @@ sequenceDiagram
 | Key | Required | Type | Meaning | Example Value |
 |---|---|---|---|---|
 | hash | YES | string | The value of the hash | "7ae80b9ab38af0c63a9a81765f434d9a7cd8f720eb6037ef303de39d779bc258" |
-| type | YES | string | The type of the hash in the hash field one of "CDHASH", "SHA256", "SHA256_AUTHENTICODE", "SHA1", "SHA1_PAGE_AUTHENTICODE", "SHA256_PAGE_AUTHICODE" | "SHA256" | 
+| type | YES | string | The type of the hash in the hash field one of "CDHASH", "SHA256", "SHA256_AUTHENTICODE", "SHA1", "SHA1_AUTHENTICODE", "SHA1_PAGE_AUTHENTICODE", "SHA256_PAGE_AUTHICODE" | "SHA256" | 
 
 
 ```json
