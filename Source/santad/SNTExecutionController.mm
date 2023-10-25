@@ -51,11 +51,13 @@
 #import "Source/santad/SNTPolicyProcessor.h"
 #import "Source/santad/SNTSyncdQueue.h"
 #include "absl/synchronization/mutex.h"
+#include "Source/santad/CEL/evaluator.h"
 
 using santa::common::PrefixTree;
 using santa::common::Unit;
 using santa::santad::TTYWriter;
 using santa::santad::event_providers::endpoint_security::Message;
+using santa::santad::cel::Context;
 
 static const size_t kMaxAllowedPathLength = MAXPATHLEN - 1;  // -1 to account for null terminator
 
@@ -253,6 +255,9 @@ static NSString *const kPrinterProxyPostMonterey =
 
   // TODO(markowsky): Maybe add a metric here for how many large executables we're seeing.
   // if (binInfo.fileSize > SomeUpperLimit) ...
+  
+  //TODO(plm): Update
+  Context ctx; 
 
   SNTCachedDecision *cd = [self.policyProcessor
            decisionForFileInfo:binInfo
@@ -288,7 +293,8 @@ static NSString *const kPrinterProxyPostMonterey =
 
         return filtered.count > 0 ? filtered : nil;
       }
-    }];
+    }
+    CelContext: ctx];
 
   cd.vnodeId = SantaVnode::VnodeForFile(targetProc->executable);
 

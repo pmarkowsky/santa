@@ -1,0 +1,13 @@
+diff --git a/bazel/deps_extra.bzl b/bazel/deps_extra.bzl
+index da7fd58..329a211 100644
+--- a/bazel/deps_extra.bzl
++++ b/bazel/deps_extra.bzl
+@@ -51,7 +51,7 @@ def cel_spec_deps_extra():
+     )
+ 
+     go_rules_dependencies()
+-    go_register_toolchains(version = "1.19.1")
++    #go_register_toolchains(version = "1.19.1")
+     gazelle_dependencies()
+     protobuf_deps()
+ 

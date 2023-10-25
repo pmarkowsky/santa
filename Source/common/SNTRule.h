@@ -53,13 +53,21 @@
 @property(readonly) NSUInteger timestamp;
 
 ///
+///  The optional CEL program that will be evaluated for this rule in addition
+///  to the normal matching logic. This can be used to make rules more specific.
+///
+@property NSString *cel;
+
+
+///
 ///  Designated initializer.
 ///
 - (instancetype)initWithIdentifier:(NSString *)identifier
                              state:(SNTRuleState)state
                               type:(SNTRuleType)type
                          customMsg:(NSString *)customMsg
-                         timestamp:(NSUInteger)timestamp;
+                         timestamp:(NSUInteger)timestamp
+                         celProgram:(NSString *)celProgram;
 
 ///
 ///  Initialize with a default timestamp: current time if rule state is transitive, 0 otherwise.

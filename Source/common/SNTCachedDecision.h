@@ -45,6 +45,7 @@
 
 @property NSString *customMsg;
 @property NSString *customURL;
+@property NSString *cel;
 @property BOOL silentBlock;
 
 @end

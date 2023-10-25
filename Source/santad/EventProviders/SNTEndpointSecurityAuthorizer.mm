@@ -66,6 +66,7 @@ using santa::santad::event_providers::endpoint_security::Message;
   const es_file_t *targetFile = msg->event.exec.target->executable;
 
   while (true) {
+    //TODO(plm): Update the cache to handle other attributes used by CEL rules.
     SNTAction returnAction = self->_authResultCache->CheckCache(targetFile);
     if (RESPONSE_VALID(returnAction)) {
       es_auth_result_t authResult = ES_AUTH_RESULT_DENY;
@@ -93,6 +94,7 @@ using santa::santad::event_providers::endpoint_security::Message;
     }
   }
 
+  //TODO(plm): Update the call to AddToCache to include other attributes used by CEL rules.
   self->_authResultCache->AddToCache(targetFile, SNTActionRequestBinary);
 
   [self.execController validateExecEvent:msg
@@ -116,6 +118,7 @@ using santa::santad::event_providers::endpoint_security::Message;
     return;
   }
 
+  // call in the base class to process the message asynchronously.
   [self processMessage:std::move(esMsg)
                handler:^(const Message &msg) {
                  [self processMessage:msg];
@@ -138,6 +141,7 @@ using santa::santad::event_providers::endpoint_security::Message;
       [NSException raise:@"Invalid post action" format:@"Invalid post action: %ld", action];
   }
 
+  //TODO(plm): Update the call to AddToCache to include other attributes used by CEL rules.:w
   self->_authResultCache->AddToCache(esMsg->event.exec.target->executable, action);
 
   // Don't let the ES framework cache DENY results. Santa only flushes ES cache

@@ -195,7 +195,7 @@ objc_library(
     srcs = [
         "DataLayer/SNTDatabaseTable.h",
         "DataLayer/SNTRuleTable.h",
-        "SNTPolicyProcessor.m",
+        "SNTPolicyProcessor.mm",
     ],
     hdrs = ["SNTPolicyProcessor.h"],
     deps = [
@@ -206,10 +206,13 @@ objc_library(
         "//Source/common:SNTFileInfo",
         "//Source/common:SNTLogging",
         "//Source/common:SNTRule",
+        "//Source/common:String",
+        "//Source/santad/cel:cel_evaluator",
         "@FMDB",
         "@MOLCertificate",
         "@MOLCodesignChecker",
         "@MOLXPCConnection",
+        "@com_google_absl//absl/status:status",
     ],
 )
 

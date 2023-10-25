@@ -32,7 +32,8 @@ static const NSUInteger kExpectedTeamIDLength = 10;
                              state:(SNTRuleState)state
                               type:(SNTRuleType)type
                          customMsg:(NSString *)customMsg
-                         timestamp:(NSUInteger)timestamp {
+                         timestamp:(NSUInteger)timestamp 
+                         celProgram:(NSString *)celProgram {
   self = [super init];
   if (self) {
     if (identifier.length == 0) {
@@ -113,6 +114,8 @@ static const NSUInteger kExpectedTeamIDLength = 10;
     _type = type;
     _customMsg = customMsg;
     _timestamp = timestamp;
+    //TODO(markowsky) add a check for CEL syntax
+    _cel = celProgram;
   }
   return self;
 }
@@ -121,7 +124,8 @@ static const NSUInteger kExpectedTeamIDLength = 10;
                              state:(SNTRuleState)state
                               type:(SNTRuleType)type
                          customMsg:(NSString *)customMsg {
-  self = [self initWithIdentifier:identifier state:state type:type customMsg:customMsg timestamp:0];
+
+  self = [self initWithIdentifier:identifier state:state type:type customMsg:customMsg timestamp:0 celProgram:nil];
   // Initialize timestamp to current time if rule is transitive.
   if (self && state == SNTRuleStateAllowTransitive) {
     [self resetTimestamp];
@@ -187,7 +191,12 @@ static const NSUInteger kExpectedTeamIDLength = 10;
     customURL = nil;
   }
 
-  SNTRule *r = [self initWithIdentifier:identifier state:state type:type customMsg:customMsg];
+  NSString *celProgram = dict[kRuleCELProgram];
+  if (![celProgram isKindOfClass:[NSString class]] || celProgram.length == 0) {
+    celProgram = nil;
+  }
+
+  SNTRule *r = [self initWithIdentifier:identifier state:state type:type customMsg:customMsg timestamp: 0 celProgram: celProgram];
   r.customURL = customURL;
   return r;
 }
@@ -211,6 +220,7 @@ static const NSUInteger kExpectedTeamIDLength = 10;
   ENCODE(self.customMsg, @"custommsg");
   ENCODE(self.customURL, @"customurl");
   ENCODE(@(self.timestamp), @"timestamp");
+  ENCODE(self.cel, @"cel");
 }
 
 - (instancetype)initWithCoder:(NSCoder *)decoder {
@@ -222,6 +232,7 @@ static const NSUInteger kExpectedTeamIDLength = 10;
     _customMsg = DECODE(NSString, @"custommsg");
     _customURL = DECODE(NSString, @"customurl");
     _timestamp = [DECODE(NSNumber, @"timestamp") unsignedIntegerValue];
+    _cel = DECODE(NSString, @"cel"); 
   }
   return self;
 }
@@ -259,7 +270,8 @@ static const NSUInteger kExpectedTeamIDLength = 10;
     kRulePolicy : [self ruleStateToPolicyString:self.state],
     kRuleType : [self ruleTypeToString:self.type],
     kRuleCustomMsg : self.customMsg ?: @"",
-    kRuleCustomURL : self.customURL ?: @""
+    kRuleCustomURL : self.customURL ?: @"",
+    kRuleCELProgram : self.cel ?: @"",
   };
 }
 

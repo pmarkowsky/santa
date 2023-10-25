@@ -25,7 +25,7 @@
 #import "Source/common/SNTLogging.h"
 #import "Source/common/SNTRule.h"
 
-static const uint32_t kRuleTableCurrentVersion = 7;
+static const uint32_t kRuleTableCurrentVersion = 8;
 
 // TODO(nguyenphillip): this should be configurable.
 // How many rules must be in database before we start trying to remove transitive rules.
@@ -251,6 +251,12 @@ static void addPathsFromDefaultMuteSet(NSMutableSet *criticalPaths) API_AVAILABL
     newVersion = 7;
   }
 
+  if (version < 8) {
+    // Add a column to track the age of transitive rules.
+    [db executeUpdate:@"ALTER TABLE 'rules' ADD 'cel' TEXT"];
+    newVersion = 8;
+  }
+
   // Save signing info for launchd and santad. Used to ensure they are always allowed.
   self.santadCSInfo = [[MOLCodesignChecker alloc] initWithSelf];
   self.launchdCSInfo = [[MOLCodesignChecker alloc] initWithPID:1];
@@ -318,7 +324,8 @@ static void addPathsFromDefaultMuteSet(NSMutableSet *criticalPaths) API_AVAILABL
                                              state:[rs intForColumn:@"state"]
                                               type:[rs intForColumn:@"type"]
                                          customMsg:[rs stringForColumn:@"custommsg"]
-                                         timestamp:[rs intForColumn:@"timestamp"]];
+                                         timestamp:[rs intForColumn:@"timestamp"]
+                                         celProgram:[rs stringForColumn:@"cel"]];
   r.customURL = [rs stringForColumn:@"customurl"];
   return r;
 }
@@ -394,7 +401,8 @@ static void addPathsFromDefaultMuteSet(NSMutableSet *criticalPaths) API_AVAILABL
                                          state:SNTRuleStateAllow
                                           type:SNTRuleTypeCertificate
                                      customMsg:nil
-                                     timestamp:0];
+                                     timestamp:0
+                                     celProgram:nil];
   }
 
   return rule;
@@ -434,10 +442,10 @@ static void addPathsFromDefaultMuteSet(NSMutableSet *criticalPaths) API_AVAILABL
         }
       } else {
         if (![db executeUpdate:@"INSERT OR REPLACE INTO rules "
-                               @"(identifier, state, type, custommsg, customurl, timestamp) "
-                               @"VALUES (?, ?, ?, ?, ?, ?);",
+                               @"(identifier, state, type, custommsg, customurl, cel, timestamp) "
+                               @"VALUES (?, ?, ?, ?, ?, ?, ?);",
                                rule.identifier, @(rule.state), @(rule.type), rule.customMsg,
-                               rule.customURL, @(rule.timestamp)]) {
+                               rule.customURL, rule.cel, @(rule.timestamp)]) {
           [self fillError:error
                      code:SNTRuleTableErrorInsertOrReplaceFailed
                   message:[db lastErrorMessage]];

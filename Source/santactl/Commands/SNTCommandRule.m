@@ -71,6 +71,7 @@ REGISTER_COMMAND_NAME(@"rule")
           @"    --force: allow manual changes even when SyncBaseUrl is set\n"
 #endif
           @"    --message {message}: custom message\n"
+          @"    --cel {cel}: CEL expression\n"
           @"\n"
           @"  Notes:\n"
           @"    The format of `identifier` when adding/checking a `signingid` rule is:\n"
@@ -95,6 +96,7 @@ REGISTER_COMMAND_NAME(@"rule")
           @"\"84de9c61777ca36b13228e2446d53e966096e78db7a72c632b5c185b2ffe68a6\"\n"
           @"                       \"custom_url\" : \"\",\n"
           @"                       \"custom_msg\": \"/bin/ls block for demo\"}\n"
+          @"                       \"cel\": \"timestamp < 1234567890\"\n"
           @"                      ]}\n");
 }
 
@@ -167,6 +169,11 @@ REGISTER_COMMAND_NAME(@"rule")
         [self printErrorUsageAndExit:@"--message requires an argument"];
       }
       newRule.customMsg = arguments[i];
+    } else if ([arg caseInsensitiveCompare:@"--cel"] == NSOrderedSame) {
+      if (++i > arguments.count - 1) {
+        [self printErrorUsageAndExit:@"--cel requires an argument"];
+      }
+      newRule.cel = arguments[i];
 #ifdef DEBUG
     } else if ([arg caseInsensitiveCompare:@"--force"] == NSOrderedSame) {
       // Don't do anything special.
@@ -401,7 +408,8 @@ REGISTER_COMMAND_NAME(@"rule")
   //    "rule_type" : "BINARY",
   //    "identifier" : "84de9c61777ca36b13228e2446d53e966096e78db7a72c632b5c185b2ffe68a6"
   //    "custom_url" : "",
-  //    "custom_msg" : "/bin/ls block for demo"
+  //    "custom_msg" : "/bin/ls block for demo",
+  //    "cel": "timestamp < 1234567890"
   //  }]}
   NSDictionary *rules = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
   if (error) {

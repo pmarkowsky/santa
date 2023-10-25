@@ -17,6 +17,7 @@
 #import <MOLCertificate/MOLCertificate.h>
 
 #import "Source/common/SNTCommonEnums.h"
+#include "Source/santad/CEL/evaluator.h"
 
 @class MOLCodesignChecker;
 @class SNTCachedDecision;
@@ -48,7 +49,8 @@
                         entitlementsFilterCallback:
                           (NSDictionary *_Nullable (^_Nonnull)(
                             const char *_Nullable teamID,
-                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback;
+                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback
+                            CelContext: (santa::santad::cel::Context) ctx;
 
 ///
 ///  A wrapper for decisionForFileInfo:fileSHA256:certificateSHA256:. This method is slower as it

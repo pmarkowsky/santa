@@ -224,3 +224,20 @@ rules_fuzzing_dependencies()
 load("@rules_fuzzing//fuzzing:init.bzl", "rules_fuzzing_init")
 
 rules_fuzzing_init()
+
+git_repository(
+  name = "com_google_cel_cpp",
+  # Latest tagged version as of 2023-11-20 (v0.9.0) doesn't include the below commit
+  # which breaks the build.
+  # See https://github.com/google/cel-cpp/issues/205
+  commit = "e59b9dde5ed1a4577eb9f7b505a756f84f7a38c9",
+  remote = "https://github.com/google/cel-cpp.git",
+  patches = ["//external_patches/cel_cpp:remove-go-sdk-registration.patch"],
+  patch_args = ["-p1"],
+)
+
+load("@com_google_cel_cpp//bazel:deps.bzl", "cel_cpp_deps")
+cel_cpp_deps()
+
+load("@com_google_cel_cpp//bazel:deps_extra.bzl", "cel_cpp_deps_extra")
+cel_cpp_deps_extra()

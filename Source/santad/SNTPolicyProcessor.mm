@@ -13,6 +13,7 @@
 ///    limitations under the License.
 
 #import "Source/santad/SNTPolicyProcessor.h"
+#include <map>
 #include <Foundation/Foundation.h>
 
 #include <Kernel/kern/cs_blobs.h>
@@ -26,7 +27,10 @@
 #import "Source/common/SNTFileInfo.h"
 #import "Source/common/SNTLogging.h"
 #import "Source/common/SNTRule.h"
+#import "Source/common/String.h"
 #import "Source/santad/DataLayer/SNTRuleTable.h"
+#include "Source/santad/CEL/evaluator.h"
+#include "absl/status/status.h"
 
 @interface SNTPolicyProcessor ()
 @property SNTRuleTable *ruleTable;
@@ -44,6 +48,83 @@
   return self;
 }
 
+// This method applies the rules to the cached decision object.
+- (void)updateCachedDecision:(SNTCachedDecision *)cd 
+                     ForRule:(SNTRule *)rule 
+                WithContext:(santa::santad::cel::Context)context {
+  std::map<std::pair<SNTRuleType, SNTRuleState>, SNTEventState> decisions {
+    {{SNTRuleTypeBinary, SNTRuleStateAllow}, SNTEventStateAllowBinary},
+    {{SNTRuleTypeBinary, SNTRuleStateAllowTransitive}, SNTEventStateAllowTransitive},
+    {{SNTRuleTypeBinary, SNTRuleStateAllowCompiler}, SNTEventStateAllowCompiler},
+    {{SNTRuleTypeBinary, SNTRuleStateSilentBlock}, SNTEventStateBlockBinary},
+    {{SNTRuleTypeBinary, SNTRuleStateBlock}, SNTEventStateBlockBinary},
+    {{SNTRuleTypeSigningID, SNTRuleStateAllow},  SNTEventStateAllowSigningID},
+    {{SNTRuleTypeSigningID, SNTRuleStateAllowCompiler}, SNTEventStateAllowCompiler},
+    {{SNTRuleTypeSigningID, SNTRuleStateSilentBlock}, SNTEventStateBlockSigningID},
+    {{SNTRuleTypeSigningID, SNTRuleStateBlock}, SNTEventStateBlockSigningID},
+    {{SNTRuleTypeCertificate, SNTRuleStateAllow} , SNTEventStateAllowCertificate},
+    {{SNTRuleTypeCertificate, SNTRuleStateSilentBlock}, SNTEventStateBlockCertificate},
+    {{SNTRuleTypeCertificate, SNTRuleStateBlock}, SNTEventStateBlockCertificate},
+    {{SNTRuleTypeTeamID, SNTRuleStateAllow}, SNTEventStateAllowTeamID},
+    {{SNTRuleTypeTeamID, SNTRuleStateSilentBlock}, SNTEventStateBlockTeamID},
+    {{SNTRuleTypeTeamID, SNTRuleStateBlock}, SNTEventStateBlockTeamID},
+  };
+
+  cd.decision = decisions[std::pair<SNTRuleType, SNTRuleState>{rule.type, rule.state}];
+
+  if (rule.state == SNTRuleStateSilentBlock) {
+    cd.silentBlock = YES;
+  } else if (rule.state == SNTRuleStateAllowCompiler) {
+    if (![self.configurator enableTransitiveRules]) {
+      cd.decision = SNTEventStateAllowBinary;
+    }
+  } else if (rule.state == SNTRuleStateAllowTransitive) {
+    if (![self.configurator enableTransitiveRules]) {
+      // check operating mode.
+      SNTClientMode mode = [self.configurator clientMode];
+      if (mode == SNTClientModeMonitor) {
+        cd.decision = SNTEventStateAllowUnknown;
+      } else {
+        cd.decision = SNTEventStateBlockUnknown;
+      }
+    } 
+  }
+
+  if (rule.customMsg) {
+    cd.customMsg = rule.customMsg;
+  }
+
+  if (rule.customURL) {
+    cd.customURL = rule.customURL;
+  }
+
+  if (rule.cel) {
+    LOGD(@"Evaluating CEL program: %@ Timestamp: %llu", rule.cel, context.timestamp);
+    santa::santad::cel::Evaluator cel_evaluator = santa::santad::cel::Evaluator();
+    absl::StatusOr<bool> result = cel_evaluator.Evaluate(santa::common::NSStringToUTF8String(rule.cel), context);
+
+    // If the CEL program evaluated without error then check the result.
+    LOGD(@"Evaluating CEL program decision value before evaling: %llu", cd.decision);
+    if (result.ok()) {
+      LOGD(@"CEL program evaluated without error");
+      // If the CEL program doesn't match the context, then we treat this event
+      // as if had fallen through on the match.
+      if (!result.value()) {
+        LOGD(@"CEL program did not match, falling through");
+        SNTClientMode mode = [self.configurator clientMode];
+        if (mode == SNTClientModeMonitor) {
+          cd.decision = SNTEventStateAllowUnknown;
+        } else {
+          cd.decision = SNTEventStateBlockUnknown;
+        }
+      }
+      LOGD(@"CEL program matched, decision: %llu", cd.decision);
+    } else {
+      LOGD(@"Failed to evaluate CEL program: %s", result.status().ToString().c_str());
+    }
+  }
+}
+
 - (nonnull SNTCachedDecision *)decisionForFileInfo:(nonnull SNTFileInfo *)fileInfo
                                         fileSHA256:(nullable NSString *)fileSHA256
                                  certificateSHA256:(nullable NSString *)certificateSHA256
@@ -52,7 +133,8 @@
                               isProdSignedCallback:(BOOL (^_Nonnull)())isProdSignedCallback
                         entitlementsFilterCallback:
                           (NSDictionary *_Nullable (^_Nullable)(
-                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback {
+                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback 
+                              CelContext: (santa::santad::cel::Context) ctx {
   SNTCachedDecision *cd = [[SNTCachedDecision alloc] init];
   cd.sha256 = fileSHA256 ?: fileInfo.SHA256;
   cd.teamID = teamID;
@@ -89,6 +171,29 @@
       cd.teamID = teamID
                     ?: [csInfo.signingInformation
                          objectForKey:(__bridge NSString *)kSecCodeInfoTeamIdentifier];
+
+
+      // Add timestamp to the context for use in CEL expressions.
+      NSDate *signingDate = [csInfo.signingInformation 
+            objectForKey:(__bridge NSString *)kSecCodeInfoTimestamp];
+
+      // If there isn't a timestamp, try to get the signing time that was
+      // provided by the authors. Often platform binaries don't have a timestamp
+      // but only have a signing date.
+      //
+      // We prefer timestamp because it's from the notary service where as the
+      // signing date is supplied by the author.
+      if (!signingDate) {
+        signingDate = [csInfo.signingInformation 
+            objectForKey:(__bridge NSString *)kSecCodeInfoTime];
+      }
+
+      if (signingDate) {
+        ctx.timestamp = (uint64_t)[signingDate timeIntervalSince1970];
+        LOGE(@"Setting timestamp to %llu", ctx.timestamp);
+      } else {
+        LOGD(@"No timestamp found");
+      }
 
       // Ensure that if no teamID exists that the signing info confirms it is a
       // platform binary. If not, remove the signingID.
@@ -132,93 +237,10 @@
                                     certificateSHA256:cd.certSHA256
                                                teamID:cd.teamID];
   if (rule) {
-    switch (rule.type) {
-      case SNTRuleTypeBinary:
-        switch (rule.state) {
-          case SNTRuleStateAllow: cd.decision = SNTEventStateAllowBinary; return cd;
-          case SNTRuleStateSilentBlock: cd.silentBlock = YES;
-          case SNTRuleStateBlock:
-            cd.customMsg = rule.customMsg;
-            cd.customURL = rule.customURL;
-            cd.decision = SNTEventStateBlockBinary;
-            return cd;
-          case SNTRuleStateAllowCompiler:
-            // If transitive rules are enabled, then SNTRuleStateAllowListCompiler rules
-            // become SNTEventStateAllowCompiler decisions.  Otherwise we treat the rule as if
-            // it were SNTRuleStateAllow.
-            if ([self.configurator enableTransitiveRules]) {
-              cd.decision = SNTEventStateAllowCompiler;
-            } else {
-              cd.decision = SNTEventStateAllowBinary;
-            }
-            return cd;
-          case SNTRuleStateAllowTransitive:
-            // If transitive rules are enabled, then SNTRuleStateAllowTransitive
-            // rules become SNTEventStateAllowTransitive decisions.  Otherwise, we treat the
-            // rule as if it were SNTRuleStateUnknown.
-            if ([self.configurator enableTransitiveRules]) {
-              cd.decision = SNTEventStateAllowTransitive;
-              return cd;
-            } else {
-              rule.state = SNTRuleStateUnknown;
-            }
-          default: break;
-        }
-        break;
-      case SNTRuleTypeSigningID:
-        switch (rule.state) {
-          case SNTRuleStateAllow: cd.decision = SNTEventStateAllowSigningID; return cd;
-          case SNTRuleStateAllowCompiler:
-            // If transitive rules are enabled, then SNTRuleStateAllowListCompiler rules
-            // become SNTEventStateAllowCompiler decisions.  Otherwise we treat the rule as if
-            // it were SNTRuleStateAllowSigningID.
-            if ([self.configurator enableTransitiveRules]) {
-              cd.decision = SNTEventStateAllowCompiler;
-            } else {
-              cd.decision = SNTEventStateAllowSigningID;
-            }
-            return cd;
-          case SNTRuleStateSilentBlock:
-            cd.silentBlock = YES;
-            // intentional fallthrough
-          case SNTRuleStateBlock:
-            cd.customMsg = rule.customMsg;
-            cd.customURL = rule.customURL;
-            cd.decision = SNTEventStateBlockSigningID;
-            return cd;
-          default: break;
-        }
-        break;
-      case SNTRuleTypeCertificate:
-        switch (rule.state) {
-          case SNTRuleStateAllow: cd.decision = SNTEventStateAllowCertificate; return cd;
-          case SNTRuleStateSilentBlock:
-            cd.silentBlock = YES;
-            // intentional fallthrough
-          case SNTRuleStateBlock:
-            cd.customMsg = rule.customMsg;
-            cd.customURL = rule.customURL;
-            cd.decision = SNTEventStateBlockCertificate;
-            return cd;
-          default: break;
-        }
-        break;
-      case SNTRuleTypeTeamID:
-        switch (rule.state) {
-          case SNTRuleStateAllow: cd.decision = SNTEventStateAllowTeamID; return cd;
-          case SNTRuleStateSilentBlock:
-            cd.silentBlock = YES;
-            // intentional fallthrough
-          case SNTRuleStateBlock:
-            cd.customMsg = rule.customMsg;
-            cd.customURL = rule.customURL;
-            cd.decision = SNTEventStateBlockTeamID;
-            return cd;
-          default: break;
-        }
-        break;
-
-      default: break;
+    //TODO(plm) make this a C function to avoid the ObjC overhead.
+    [self updateCachedDecision:cd ForRule:rule WithContext:ctx];
+    if (cd.decision != SNTEventStateBlockUnknown || cd.decision != SNTEventStateAllowUnknown) {
+      return cd;
     }
   }
 
@@ -256,7 +278,8 @@
                         entitlementsFilterCallback:
                           (NSDictionary *_Nullable (^_Nonnull)(
                             const char *_Nullable teamID,
-                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback {
+                            NSDictionary *_Nullable entitlements))entitlementsFilterCallback 
+                            CelContext: (santa::santad::cel::Context)context {
   NSString *signingID;
   NSString *teamID;
 
@@ -287,7 +310,8 @@
     }
     entitlementsFilterCallback:^NSDictionary *(NSDictionary *entitlements) {
       return entitlementsFilterCallback(entitlementsFilterTeamID, entitlements);
-    }];
+    }
+    CelContext: context];
 }
 
 // Used by `$ santactl fileinfo`.
@@ -295,7 +319,8 @@
                                         fileSHA256:(nullable NSString *)fileSHA256
                                  certificateSHA256:(nullable NSString *)certificateSHA256
                                             teamID:(nullable NSString *)teamID
-                                         signingID:(nullable NSString *)signingID {
+                                         signingID:(nullable NSString *)signingID 
+                                         context:(santa::santad::cel::Context)context {
   MOLCodesignChecker *csInfo;
   NSError *error;
 
@@ -326,7 +351,8 @@
                   return NO;
                 }
               }
-        entitlementsFilterCallback:nil];
+        entitlementsFilterCallback:nil
+        CelContext: context];
 }
 
 ///

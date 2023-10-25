@@ -126,6 +126,7 @@ extern NSString *const kRuleTypeTeamID;
 extern NSString *const kRuleTypeSigningID;
 extern NSString *const kRuleCustomMsg;
 extern NSString *const kRuleCustomURL;
+extern NSString *const kRuleCELProgram;
 extern NSString *const kCursor;
 
 extern NSString *const kBackoffInterval;

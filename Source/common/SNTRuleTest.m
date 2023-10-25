@@ -190,6 +190,17 @@
     XCTAssertNotNil(sut);
     XCTAssertEqualObjects(sut.identifier, ident);
   }
+
+  // Ensure that a well structured CEL program is handled correctly.
+  sut = [[SNTRule alloc] initWithDictionary:@{
+    @"identifier" : @"ABCDEFGHIJ",
+    @"policy" : @"ALLOWLIST",
+    @"rule_type" : @"TEAMID",
+    @"cel" : @"timestamp > 0",
+  }];
+  XCTAssertNotNil(sut);
+  XCTAssertEqualObjects(sut.identifier, @"ABCDEFGHIJ");
+  XCTAssertEqualObjects(sut.cel, @"timestamp > 0");
 }
 
 - (void)testInitWithDictionaryInvalid {
