@@ -190,7 +190,7 @@
 
       if (signingDate) {
         ctx.timestamp = (uint64_t)[signingDate timeIntervalSince1970];
-        LOGE(@"Setting timestamp to %llu", ctx.timestamp);
+        LOGD(@"Setting timestamp to %llu", ctx.timestamp);
       } else {
         LOGD(@"No timestamp found");
       }
