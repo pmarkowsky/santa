@@ -367,6 +367,7 @@ downloading if the rules need to be downloaded in multiple batches.
 | rule\_type | YES | string | Identifies the type of rule (must be one of the examples) | "BINARY", "CERTIFICATE", "SIGNINGID", "TEAMID" |
 | custom\_msg | NO | string | A custom message to display when the rule matches | "Hello" |
 | custom\_url | NO | string | A custom URL to use for the open button when the rule matches | http://lmgtfy.app/?q=dont+download+malware |
+| cel | NO | string | A CEL program to further refine the rules match | timestamp >= 12345 |
 | creation\_time | NO | float64 | Time the rule was created | 1573543803.349378 |
 | file\_bundle\_binary\_count | NO | integer | The number of binaries in a bundle | 13 |
 | file\_bundle\_hash | NO | string | The SHA256 of all binaries in a bundle | "7466e3687f540bcb7792c6d14d5a186667dbe18a85021857b42effe9f0370805" |
@@ -387,7 +388,8 @@ downloading if the rules need to be downloaded in multiple batches.
     "rule_type": "BINARY",
     "policy": "ALLOWLIST",
     "custom_msg": "",
-    "creation_time": 1573572118.380034
+    "creation_time": 1573572118.380034,
+    "cel": "timestamp > 123456789"
   },
   {
     "identifier": "EQHXZ8M8AV",
