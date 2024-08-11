@@ -10,10 +10,10 @@
                 <outlet property="applicationNameLabel" destination="qgf-Jf-cJr" id="1JX-X8-03v"/>
                 <outlet property="bundleHashLabel" destination="xP7-jE-NF8" id="i8B-Gs-2E3"/>
                 <outlet property="bundleHashTitle" destination="MhO-U0-MLR" id="KT0-bK-fpV"/>
+                <outlet property="dismissEventButton" destination="BbV-3h-mmL" id="5s4-ZB-xlo"/>
                 <outlet property="foundFileCountLabel" destination="LHV-gV-vyf" id="Sr0-T2-xGx"/>
                 <outlet property="hashingIndicator" destination="VyY-Yg-JOe" id="Yq4-tZ-9ep"/>
                 <outlet property="openEventButton" destination="7ua-5a-uSd" id="9s4-ZA-Vlo"/>
-                <outlet property="dismissEventButton" destination="BbV-3h-mmL" id="5s4-ZB-xlo"/>
                 <outlet property="window" destination="9Bq-yh-54f" id="Uhs-WF-TV9"/>
             </connections>
         </customObject>
@@ -22,7 +22,7 @@
         <window title="Santa Blocked Execution" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" visibleAtLaunch="NO" animationBehavior="none" titlebarAppearsTransparent="YES" titleVisibility="hidden" id="9Bq-yh-54f" customClass="SNTMessageWindow">
             <windowStyleMask key="styleMask" titled="YES" utility="YES"/>
             <rect key="contentRect" x="167" y="107" width="540" height="479"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1916" height="1099"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1512" height="944"/>
             <view key="contentView" id="Iwq-Lx-rLv">
                 <rect key="frame" x="0.0" y="0.0" width="540" height="462"/>
                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -240,8 +240,8 @@
                             </userDefinedRuntimeAttributes>
                         </textFieldCell>
                     </textField>
-                    <button verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="7ua-5a-uSd">
-                        <rect key="frame" x="147" y="30" width="126" height="32"/>
+                    <button verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7ua-5a-uSd">
+                        <rect key="frame" x="81" y="30" width="126" height="32"/>
                         <buttonCell key="cell" type="push" title="Open..." bezelStyle="rounded" alignment="center" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="X1b-TF-1TL">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="system"/>
@@ -285,8 +285,8 @@ DQ
                             <binding destination="-2" name="value" keyPath="self.silenceFutureNotifications" id="tEb-2A-sht"/>
                         </connections>
                     </button>
-                    <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="BbV-3h-mmL" userLabel="Dismiss Button">
-                        <rect key="frame" x="271" y="28" width="124" height="34"/>
+                    <button verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="BbV-3h-mmL" userLabel="Dismiss Button">
+                        <rect key="frame" x="338" y="29" width="124" height="34"/>
                         <buttonCell key="cell" type="push" title="Dismiss" bezelStyle="rounded" alignment="center" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="XR6-Xa-gP4">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="system"/>
@@ -418,6 +418,25 @@ Gw
                             <outlet property="nextKeyView" destination="7ua-5a-uSd" id="z5y-RR-IEH"/>
                         </connections>
                     </textField>
+                    <button verticalHuggingPriority="750" horizontalCompressionResistancePriority="1000" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5bz-fO-owz">
+                        <rect key="frame" x="204" y="30" width="140" height="32"/>
+                        <buttonCell key="cell" type="push" title="Check" bezelStyle="rounded" alignment="center" state="on" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="vcw-dj-kGW">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                            <string key="keyEquivalent" base64-UTF8="YES">
+DQ
+</string>
+                            <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                        </buttonCell>
+                        <color key="bezelColor" name="systemRedColor" catalog="System" colorSpace="catalog"/>
+                        <constraints>
+                            <constraint firstAttribute="width" priority="900" constant="112" id="4rT-y6-pqO"/>
+                        </constraints>
+                        <connections>
+                            <action selector="checkEventDetails:" target="-2" id="VhL-ql-rCW"/>
+                            <outlet property="nextKeyView" destination="BbV-3h-mmL" id="gfu-0E-MPM"/>
+                        </connections>
+                    </button>
                 </subviews>
                 <constraints>
                     <constraint firstItem="oFj-ol-xpL" firstAttribute="leading" secondItem="Iwq-Lx-rLv" secondAttribute="leading" constant="10" id="0AD-PS-5V1"/>
