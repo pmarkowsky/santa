@@ -12,6 +12,7 @@
 ///    See the License for the specific language governing permissions and
 ///    limitations under the License.
 
+#import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
 
 #import <MOLXPCConnection/MOLXPCConnection.h>
@@ -30,6 +31,9 @@ int main(int argc, const char *argv[]) {
       [SNTXPCSyncServiceInterface syncServiceInterface];
     c.exportedObject = [[SNTSyncService alloc] init];
     [c resume];
-    [[NSRunLoop mainRunLoop] run];
+
+    NSApplication *app = [NSApplication sharedApplication];
+    [app run];
+    //[[NSRunLoop mainRunLoop] run];
   }
 }

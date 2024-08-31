@@ -55,6 +55,8 @@ static const uint8_t kMaxEnqueuedSyncs = 2;
 @property NSString *xsrfToken;
 @property NSString *xsrfTokenHeader;
 
+@property NSString *deviceToken;
+
 @end
 
 @implementation SNTSyncManager
@@ -141,7 +143,7 @@ static const uint8_t kMaxEnqueuedSyncs = 2;
   self.xsrfTokenHeader = syncState.xsrfTokenHeader;
 }
 
-- (void)isFCMListening:(void (^)(BOOL))reply {
+- (void)isFCMOrAPNSListening:(void (^)(BOOL))reply {
   reply(self.pushNotifications.isConnected);
 }
 

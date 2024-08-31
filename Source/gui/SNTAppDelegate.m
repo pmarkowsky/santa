@@ -15,13 +15,19 @@
 #import "Source/gui/SNTAppDelegate.h"
 
 #import <MOLXPCConnection/MOLXPCConnection.h>
+#import <UserNotifications/UserNotifications.h>
 
 #import "Source/common/SNTConfigurator.h"
 #import "Source/common/SNTLogging.h"
 #import "Source/common/SNTStrengthify.h"
 #import "Source/common/SNTXPCControlInterface.h"
+#import "Source/common/SNTXPCSyncServiceInterface.h"
 #import "Source/gui/SNTAboutWindowController.h"
 #import "Source/gui/SNTNotificationManager.h"
+
+#import <Security/Security.h>
+#import <UserNotifications/UserNotifications.h>
+
 
 @interface SNTAppDelegate ()
 @property SNTAboutWindowController *aboutWindowController;

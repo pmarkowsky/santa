@@ -4,5 +4,6 @@
 <dict>
 	<key>com.apple.developer.system-extension.install</key>
 	<true/>
+        <key>com.apple.application-identifier</key>
 </dict>
 </plist>

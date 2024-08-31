@@ -11,7 +11,7 @@
 ///    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ///    See the License for the specific language governing permissions and
 ///    limitations under the License
-
+#import <Cocoa/Cocoa.h>
 #import "Source/santasyncservice/SNTPushNotifications.h"
 
 #import "Source/common/SNTConfigurator.h"
@@ -31,6 +31,8 @@ static NSString *const kFCMTargetHostIDKey = @"target_host_id";
 
 @property SNTSyncFCM *FCMClient;
 @property NSString *token;
+@property BOOL UseAPNS;
+@property BOOL APNSConnected;
 
 @property NSUInteger pushNotificationsFullSyncInterval;
 @property NSUInteger pushNotificationsGlobalRuleSyncDeadline;
@@ -47,9 +49,21 @@ static NSString *const kFCMTargetHostIDKey = @"target_host_id";
     _pushNotificationsFullSyncInterval = kDefaultPushNotificationsFullSyncInterval;
     _pushNotificationsGlobalRuleSyncDeadline = kDefaultPushNotificationsGlobalRuleSyncDeadline;
   }
+
+  if ([[SNTConfigurator configurator] pushNotificationsEnabled]) {
+    self.UseAPNS = YES;
+    self.APNSConnected = NO;
+    NSApplication *app = [NSApplication sharedApplication];
+    app.delegate = self;
+  } else {
+    self.UseAPNS = NO;
+    self.APNSConnected = NO;
+  }
+
   return self;
 }
 
+// Invoked from preflight
 - (void)listenWithSyncState:(SNTSyncState *)syncState {
   self.pushNotificationsFullSyncInterval = syncState.pushNotificationsFullSyncInterval;
   self.pushNotificationsGlobalRuleSyncDeadline = syncState.pushNotificationsGlobalRuleSyncDeadline;
@@ -106,10 +120,15 @@ static NSString *const kFCMTargetHostIDKey = @"target_host_id";
   NSDictionary *message = [self messageFromMessageData:[self messageDataFromFCMmessage:FCMmessage]];
 
   if (!message) {
-    LOGD(@"Push notification message is not in the expected format...dropping message");
+    LOGD(@"FCM Push notification message is not in the expected format...dropping message");
     return;
   }
 
+  [self processPushNotificationMessage:message withMachineID:machineID];
+}
+
+// Processes a push notification message from either APNS or FCM.
+- (void) processPushNotificationMessage:(NSDictionary *)message withMachineID:(NSString *)machineID {
   NSString *action = message[kFCMActionKey];
   if (!action) {
     LOGD(@"Push notification message contains no action");
@@ -183,7 +202,69 @@ static NSString *const kFCMTargetHostIDKey = @"target_host_id";
 }
 
 - (BOOL)isConnected {
-  return self.FCMClient.isConnected;
+  if (self.UseAPNS && self.APNSConnected) {
+    return YES;
+  } else {
+    return self.FCMClient.isConnected;
+  }
+}
+
+# pragma mark NSApplicationDelegate methods for push notifications
+
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+  if (![[SNTConfigurator configurator] pushNotificationsEnabled]) {
+    LOGD(@"Push notifications are disabled");
+    return;
+  }
+  NSApplication *app = [NSApplication sharedApplication];
+  [app registerForRemoteNotifications];
+  // Print the bundle ID
+  NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+  NSLog(@"Listening for push notifications for App Bundle ID: %@", bundleID);
+  if (app.registeredForRemoteNotifications) {
+        LOGI(@"Registered for APNS push notifications");
+  } else {
+        LOGE(@"Failed to register for APNS push notifications");
+  }
+}
+
+// Helper function to convert NSData to hex string
+- (NSString *)hexStringFromData:(NSData *)data {
+    if (!data || [data length] == 0) {
+        return @"";
+    }
+
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:[data length] * 2];
+    const unsigned char *bytes = [data bytes];
+
+    for (NSUInteger i = 0; i < [data length]; i++) {
+        [hexString appendFormat:@"%02x", bytes[i]];
+    }
+
+    return hexString;
+}
+
+- (void)application:(NSApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    NSString *tokenString = [self hexStringFromData:deviceToken];
+    LOGD(@"Device Token: %@", tokenString);
+    self.token = tokenString;
+    self.APNSConnected = YES;
+}
+
+- (void)application:(NSApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    LOGE(@"Failed to register for remote notifications: %@", error.localizedDescription);
+}
+
+- (void)application:(NSApplication *)application didReceiveRemoteNotification:(NSDictionary<NSString *, id> *)userInfo  {
+    LOGI(@"Received Push Notification: %@", userInfo);
+    // Check that we have a valid machine ID
+    if (!userInfo[kFCMTargetHostIDKey]) {
+        LOGE(@"Received push notification without a target host ID");
+        LOGD(@"%@", userInfo);
+        return;
+    }
+    // Handle the push notification
+    [self processPushNotificationMessage:userInfo withMachineID:userInfo[kFCMTargetHostIDKey]];
 }
 
 @end

@@ -76,7 +76,7 @@
 }
 
 - (void)isFCMListening:(void (^)(BOOL))reply {
-  [self.syncManager isFCMListening:reply];
+  [self.syncManager isFCMOrAPNSListening:reply];
 }
 
 // TODO(bur): Add support for santactl sync --debug to enable debug logging for that sync.
