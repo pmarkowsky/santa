@@ -23,6 +23,10 @@
 #import "Source/gui/SNTAboutWindowController.h"
 #import "Source/gui/SNTNotificationManager.h"
 
+#import <Security/Security.h>
+#import <UserNotifications/UserNotifications.h>
+
+
 @interface SNTAppDelegate ()
 @property SNTAboutWindowController *aboutWindowController;
 @property SNTNotificationManager *notificationManager;
@@ -55,6 +59,15 @@
                                   }];
 
   [self createDaemonConnection];
+  [self registerForRemoteNotifications];
+    // Print the bundle ID
+  NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
+  NSLog(@"App Bundle ID: %@", bundleID);
+    if (self.registeredForRemoteNotifications) {
+        NSLog(@"Registered for pushNotifications");
+    } else {
+        NSLog(@"Failed to register for Push Notifications");
+    }
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
@@ -123,6 +136,48 @@
   [editMenuItem setSubmenu:editMenu];
   [mainMenu addItem:editMenuItem];
   [NSApp setMainMenu:mainMenu];
+}
+
+#pragma mark Push Notification
+
+- (NSString *)hexStringFromData:(NSData *)data {
+    if (!data || [data length] == 0) {
+        return @"";
+    }
+
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:[data length] * 2];
+    const unsigned char *bytes = [data bytes];
+
+    for (NSUInteger i = 0; i < [data length]; i++) {
+        [hexString appendFormat:@"%02x", bytes[i]];
+    }
+
+    return hexString;
+}
+
+- (void)application:(NSApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    NSString *tokenString = [self hexStringFromData:deviceToken];
+    NSLog(@"Device Token: %@", tokenString);
+}
+
+- (void)application:(NSApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    NSLog(@"Failed to register for remote notifications: %@", error.localizedDescription);
+}
+
+- (void)application:(NSApplication *)application didReceiveRemoteNotification:(NSDictionary<NSString *, id> *)userInfo  {
+    NSLog(@"Received Push Notification: %@", userInfo);
+    // Handle the push notification
+}
+
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+didReceiveNotificationResponse:(UNNotificationResponse *)response
+         withCompletionHandler:(void (^)(void))completionHandler {
+    // Handle the notification here
+    UNNotificationContent *content = response.notification.request.content;
+    NSString *body = content.body;
+    NSLog(@"Received Push Notification: %@", body);
+
+    completionHandler();
 }
 
 @end
