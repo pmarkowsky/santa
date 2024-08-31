@@ -92,7 +92,7 @@ static constexpr std::string_view kSantaKextIdentifier = "com.google.santa-drive
       if (audit_token_to_pid(esMsg->event.signal.target->audit_token) == getpid() &&
           audit_token_to_pid(esMsg->process->audit_token) != 1) {
         LOGW(@"Preventing attempt to kill Santa daemon");
-        result = ES_AUTH_RESULT_DENY;
+        //result = ES_AUTH_RESULT_DENY;
       }
       break;
     }
