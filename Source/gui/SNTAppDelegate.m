@@ -15,11 +15,13 @@
 #import "Source/gui/SNTAppDelegate.h"
 
 #import <MOLXPCConnection/MOLXPCConnection.h>
+#import <UserNotifications/UserNotifications.h>
 
 #import "Source/common/SNTConfigurator.h"
 #import "Source/common/SNTLogging.h"
 #import "Source/common/SNTStrengthify.h"
 #import "Source/common/SNTXPCControlInterface.h"
+#import "Source/common/SNTXPCSyncServiceInterface.h"
 #import "Source/gui/SNTAboutWindowController.h"
 #import "Source/gui/SNTNotificationManager.h"
 
@@ -59,14 +61,16 @@
                                   }];
 
   [self createDaemonConnection];
-  [self registerForRemoteNotifications];
-    // Print the bundle ID
+  NSApplication *app = [NSApplication sharedApplication];
+  [app registerForRemoteNotifications];
+  NSLog(@"Registered for push notifications");
+  // Print the bundle ID
   NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
-  NSLog(@"App Bundle ID: %@", bundleID);
-    if (self.registeredForRemoteNotifications) {
-        NSLog(@"Registered for pushNotifications");
+  NSLog(@"PLM -- Listening for app Bundle ID: %@", bundleID);
+  if (app.registeredForRemoteNotifications) {
+        NSLog(@"PLM -- Registered for pushNotifications");
     } else {
-        NSLog(@"Failed to register for Push Notifications");
+        NSLog(@"PLM -- Failed to register for Push Notifications");
     }
 }
 
@@ -157,27 +161,43 @@
 
 - (void)application:(NSApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     NSString *tokenString = [self hexStringFromData:deviceToken];
-    NSLog(@"Device Token: %@", tokenString);
+    NSLog(@"PLM -- Device Token: %@", tokenString);
 }
 
 - (void)application:(NSApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-    NSLog(@"Failed to register for remote notifications: %@", error.localizedDescription);
+    NSLog(@"PLM -- Failed to register for remote notifications: %@", error.localizedDescription);
 }
 
 - (void)application:(NSApplication *)application didReceiveRemoteNotification:(NSDictionary<NSString *, id> *)userInfo  {
-    NSLog(@"Received Push Notification: %@", userInfo);
+    NSLog(@"PLM2 -- Received Push Notification: %@", userInfo);
     // Handle the push notification
+    // Tell the sync service to sync
+    MOLXPCConnection *ss = [SNTXPCSyncServiceInterface configuredConnection];
+    ss.invalidationHandler = ^(void) {
+      NSLog(@"PLM -- Failed to connect to the sync service.");
+    };
+
+    [ss resume];
+
+    NSXPCListener *logListener = [NSXPCListener anonymousListener];
+    MOLXPCConnection *lr = [[MOLXPCConnection alloc] initServerWithListener:logListener];
+    lr.exportedObject = self;
+    lr.unprivilegedInterface =
+    [NSXPCInterface interfaceWithProtocol:@protocol(SNTSyncServiceLogReceiverXPC)];
+    [lr resume];
+
+    SNTSyncType syncType = SNTSyncTypeNormal;
+    [[ss remoteObjectProxy] syncWithLogListener:logListener.endpoint
+                   syncType:syncType
+                      reply:^(SNTSyncStatusType status) {
+                        if (status == SNTSyncStatusTypeTooManySyncsInProgress) {
+                          NSLog(@"PLM -- Too many syncs in progress, try again later.");
+                        }
+                      }];
 }
 
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center
-didReceiveNotificationResponse:(UNNotificationResponse *)response
-         withCompletionHandler:(void (^)(void))completionHandler {
-    // Handle the notification here
-    UNNotificationContent *content = response.notification.request.content;
-    NSString *body = content.body;
-    NSLog(@"Received Push Notification: %@", body);
-
-    completionHandler();
+- (void)didReceiveLog:(NSString *)log {
+  NSLog(@"PLM Pushed Sync -- %@", log);
 }
 
 @end

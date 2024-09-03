@@ -4,5 +4,9 @@
 <dict>
 	<key>com.apple.developer.system-extension.install</key>
 	<true/>
+        <key>com.apple.application-identifier</key>
+        <string>TJNVEKW352.org.vodun.santa</string>
+        <key>com.apple.developer.aps-environment</key>
+        <string>development</string>
 </dict>
 </plist>
