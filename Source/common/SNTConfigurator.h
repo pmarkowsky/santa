@@ -625,6 +625,11 @@
 @property(readonly, nonatomic) BOOL fcmEnabled;
 
 ///
+/// If true, APNS push notifications will be used enabled. Defaults to false.
+///
+@property(readonly, nonatomic) BOOL pushNotificationsEnabled;
+
+///
 /// True if metricsFormat and metricsURL are set. False otherwise.
 ///
 @property(readonly, nonatomic) BOOL exportMetrics;

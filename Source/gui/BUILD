@@ -91,7 +91,6 @@ objc_library(
         "//Source/common:SNTSyncConstants",
         "//Source/common:SNTXPCControlInterface",
         "//Source/common:SNTXPCNotifierInterface",
-        "//Source/common:SNTXPCSyncServiceInterface",
         "//Source/santasyncservice:sync_lib",
         "@MOLCertificate",
         "@MOLCodesignChecker",
@@ -109,7 +108,7 @@ macos_application(
         "//Source/santad:com.google.santa.daemon": "Library/SystemExtensions",
     },
     app_icons = glob(["Resources/Images.xcassets/**"]),
-    bundle_id = "org.vodun.santa",
+    bundle_id = "com.google.santa.gui",
     bundle_name = "Santa",
     codesignopts = [
         "--timestamp",

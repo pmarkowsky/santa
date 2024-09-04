@@ -12,6 +12,7 @@
 ///    See the License for the specific language governing permissions and
 ///    limitations under the License.
 
+#import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
 
 #import "Source/common/SNTCommonEnums.h"
@@ -22,7 +23,7 @@
 ///
 ///  Handles push notifications and periodic syncing with a sync server.
 ///
-@interface SNTSyncManager : NSObject
+@interface SNTSyncManager : NSObject <NSApplicationDelegate>
 
 ///
 ///  Use the designated initializer initWithDaemonConnection:isDaemon:
@@ -69,6 +70,5 @@
 - (void)postEventsToSyncServer:(NSArray<SNTStoredEvent *> *)events fromBundle:(BOOL)isFromBundle;
 - (void)postBundleEventToSyncServer:(SNTStoredEvent *)event
                               reply:(void (^)(SNTBundleEventAction))reply;
-- (void)isFCMListening:(void (^)(BOOL))reply;
-
+- (void)isFCMOrAPNSListening:(void (^)(BOOL))reply;
 @end

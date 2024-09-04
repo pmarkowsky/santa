@@ -12,6 +12,7 @@
 ///    See the License for the specific language governing permissions and
 ///    limitations under the License
 
+#import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
 
 @protocol SNTPushNotificationsDelegate
@@ -25,7 +26,7 @@
 @class SNTSyncState;
 @class SNTSyncFCM;
 
-@interface SNTPushNotifications : NSObject
+@interface SNTPushNotifications : NSObject <NSApplicationDelegate>
 
 - (void)listenWithSyncState:(SNTSyncState *)syncState;
 - (void)stop;
