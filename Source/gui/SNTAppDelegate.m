@@ -61,16 +61,19 @@
                                   }];
 
   [self createDaemonConnection];
+
   NSApplication *app = [NSApplication sharedApplication];
   [app registerForRemoteNotifications];
   NSLog(@"Registered for push notifications");
   // Print the bundle ID
   NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
-  NSLog(@"PLM -- Listening for app Bundle ID: %@", bundleID);
+
+  NSLog(@"Listening for app Bundle ID: %@\n", bundleID);
+
   if (app.registeredForRemoteNotifications) {
-        NSLog(@"PLM -- Registered for pushNotifications");
+        NSLog(@"Sucessfully registered for push notifications\n");
     } else {
-        NSLog(@"PLM -- Failed to register for Push Notifications");
+        NSLog(@"Failed to register for Push Notifications\n");
     }
 }
 
@@ -161,20 +164,20 @@
 
 - (void)application:(NSApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     NSString *tokenString = [self hexStringFromData:deviceToken];
-    NSLog(@"PLM -- Device Token: %@", tokenString);
+    NSLog(@"PLM -- Device Token: %@\n\n", tokenString);
 }
 
 - (void)application:(NSApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-    NSLog(@"PLM -- Failed to register for remote notifications: %@", error.localizedDescription);
+    NSLog(@"PLM -- Failed to register for remote notifications: %@\n\n", error.localizedDescription);
 }
 
 - (void)application:(NSApplication *)application didReceiveRemoteNotification:(NSDictionary<NSString *, id> *)userInfo  {
-    NSLog(@"PLM2 -- Received Push Notification: %@", userInfo);
+    NSLog(@"PLM2 -- Received Push Notification: %@\n", userInfo);
     // Handle the push notification
     // Tell the sync service to sync
     MOLXPCConnection *ss = [SNTXPCSyncServiceInterface configuredConnection];
     ss.invalidationHandler = ^(void) {
-      NSLog(@"PLM -- Failed to connect to the sync service.");
+      NSLog(@"PLM2 -- Failed to connect to the sync service.");
     };
 
     [ss resume];
@@ -186,12 +189,18 @@
     [NSXPCInterface interfaceWithProtocol:@protocol(SNTSyncServiceLogReceiverXPC)];
     [lr resume];
 
+    NSLog(@"PLM Received Push Notfication: %@\n", userInfo);
+    NSLog(@"PLM Syncing with log listener %@\n", logListener.endpoint);
+
     SNTSyncType syncType = SNTSyncTypeNormal;
     [[ss remoteObjectProxy] syncWithLogListener:logListener.endpoint
                    syncType:syncType
                       reply:^(SNTSyncStatusType status) {
                         if (status == SNTSyncStatusTypeTooManySyncsInProgress) {
                           NSLog(@"PLM -- Too many syncs in progress, try again later.");
+                        } else {
+                          NSLog(@"PLM -- sending notification");
+                          [self.notificationManager postRuleSyncNotificationWithCustomMessage:@"osascript can now be run"];
                         }
                       }];
 }
